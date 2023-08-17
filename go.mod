@@ -1,4 +1,4 @@
-module github.com/lasaleks/grpcstreamack.git
+module github.com/lasaleks/grpcstreamack
 
 go 1.20
 
