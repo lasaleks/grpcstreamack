@@ -30,7 +30,7 @@ type ServerStream struct {
 	TypeStream string
 	ch_send    chan interface{}
 	finished   chan bool
-	option     OptionStream
+	Option     OptionStream
 }
 
 func NewSubStream(id int32, typeStream string, ctx context.Context) *ServerStream {
@@ -39,8 +39,8 @@ func NewSubStream(id int32, typeStream string, ctx context.Context) *ServerStrea
 		finished:   make(chan bool),
 		TypeStream: typeStream,
 	}
-	sub.option = sub.GetOptionsFromContext(ctx)
-	sub.ch_send = make(chan interface{}, sub.option.MAX_SIZE_BUFF)
+	sub.Option = sub.GetOptionsFromContext(ctx)
+	sub.ch_send = make(chan interface{}, sub.Option.MAX_SIZE_BUFF)
 	return &sub
 }
 
@@ -87,7 +87,7 @@ func (s *ServerStream) Send(value interface{}) {
 	case s.ch_send <- value:
 	default:
 		// Default case is to avoid blocking in case client has already unsubscribed
-		log.Printf("WARRNING max size exceeded %d Stream Id:%d Name:%s\n", len(s.ch_send), s.Id, s.option.Name)
+		log.Printf("WARRNING max size exceeded %d Stream Id:%d Name:%s\n", len(s.ch_send), s.Id, s.Option.Name)
 		select {
 		case s.finished <- true:
 		default:
@@ -103,12 +103,12 @@ get_init_ack func() interface{} {
 */
 
 func (s *ServerStream) Stream(stream grpc.ServerStream, get_init_ack func() interface{}) error {
-	stream.SendHeader(metadata.Pairs("qos", fmt.Sprintf("%d", s.option.QOS)))
+	stream.SendHeader(metadata.Pairs("qos", fmt.Sprintf("%d", s.Option.QOS)))
 	fin := s.finished
 	count := 0
 	ack := make(chan bool, 2)
 	go func() {
-		defer log.Printf("Stream %s RecvEnd Client %s ID:%d", s.TypeStream, s.option.Name, s.Id)
+		defer log.Printf("Stream %s RecvEnd Client %s ID:%d", s.TypeStream, s.Option.Name, s.Id)
 		for {
 			err := stream.RecvMsg(get_init_ack()) //&insiteexpert.StreamAck{}
 			if err == io.EOF {
@@ -132,17 +132,17 @@ func (s *ServerStream) Stream(stream grpc.ServerStream, get_init_ack func() inte
 	}()
 
 	for {
-		if count >= s.option.QOS {
+		if count >= s.Option.QOS {
 			select {
 			case <-stream.Context().Done():
 				return nil
 			case <-ack:
 				count = 0
 			case <-s.finished:
-				log.Printf("Stream %s Closing for client %s ID:%d", s.TypeStream, s.option.Name, s.Id)
+				log.Printf("Stream %s Closing for client %s ID:%d", s.TypeStream, s.Option.Name, s.Id)
 				return nil
-			case <-time.After(time.Second * time.Duration(s.option.WAIT_ACK_TIMEOUT)):
-				log.Printf("Stream %s Wait ACK Timeout %d client %s ID:%d", s.TypeStream, s.option.WAIT_ACK_TIMEOUT, s.option.Name, s.Id)
+			case <-time.After(time.Second * time.Duration(s.Option.WAIT_ACK_TIMEOUT)):
+				log.Printf("Stream %s Wait ACK Timeout %d client %s ID:%d", s.TypeStream, s.Option.WAIT_ACK_TIMEOUT, s.Option.Name, s.Id)
 				return nil
 			}
 		} else {
@@ -150,7 +150,7 @@ func (s *ServerStream) Stream(stream grpc.ServerStream, get_init_ack func() inte
 			case <-stream.Context().Done():
 				return nil
 			case <-fin:
-				log.Printf("Closing stream %s for client %s ID:%d", s.TypeStream, s.option.Name, s.Id)
+				log.Printf("Closing stream %s for client %s ID:%d", s.TypeStream, s.Option.Name, s.Id)
 				return nil
 			case value := <-s.ch_send:
 				// копируем в память перед отправкой
