@@ -107,7 +107,7 @@ get_init_ack func() interface{} {
 */
 
 func (s *ServerStream) Stream(stream grpc.ServerStream, get_init_ack func() interface{}) error {
-	log.Printf("Received subscribe stream %s", s.GetDesc())
+	log.Printf("Received subscribe %s", s.GetDesc())
 	defer log.Printf("Client %s has disconnected", s.GetDesc())
 
 	stream.SendHeader(metadata.Pairs("qos", fmt.Sprintf("%d", s.Option.QOS)))
@@ -115,7 +115,6 @@ func (s *ServerStream) Stream(stream grpc.ServerStream, get_init_ack func() inte
 	count := 0
 	ack := make(chan bool, 2)
 	go func() {
-		defer log.Printf("%s RecvMsg", s.GetDesc())
 		for {
 			err := stream.RecvMsg(get_init_ack()) //&insiteexpert.StreamAck{}
 			if err == io.EOF {
@@ -157,7 +156,7 @@ func (s *ServerStream) Stream(stream grpc.ServerStream, get_init_ack func() inte
 			case <-stream.Context().Done():
 				return nil
 			case <-fin:
-				log.Printf("%s closing stream", s.GetDesc())
+				log.Printf("%s closing", s.GetDesc())
 				return nil
 			case value := <-s.ch_send:
 				// копируем в память перед отправкой

@@ -25,12 +25,6 @@ type ClientStream struct {
 	SetData        func(interface{})
 }
 
-/*
-getInitAck func() {
-	return &insiteexpert.StreamAck{}
-}
-*/
-
 func (s *ClientStream) GetDesc() string {
 	return fmt.Sprintf("ClientStream %s Name:%s", s.NameStream, s.NameConnect)
 }
