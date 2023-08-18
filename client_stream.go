@@ -13,11 +13,16 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-type ClientStreamOption struct {
-	Name           string
+type ClientStream struct {
+	NameConnect    string
+	NameStream     string
 	QOS            int
 	MaxSizeBuff    int
 	WaitAckTimeout int
+	Connect        func(context.Context) (grpc.ClientStream, error)
+	InitAck        func() interface{}
+	InitData       func() interface{}
+	SetData        func(interface{})
 }
 
 /*
@@ -26,10 +31,14 @@ getInitAck func() {
 }
 */
 
-func RunClientStream(wg *sync.WaitGroup, ctx context.Context, getInitAck func() interface{}, connect func(context.Context) (grpc.ClientStream, error), getInitData func() interface{}, setData func(interface{}), option ClientStreamOption) error {
+func (s *ClientStream) GetDesc() string {
+	return fmt.Sprintf("ClientStream %s Name:%s", s.NameStream, s.NameConnect)
+}
+
+func (s *ClientStream) Run(wg *sync.WaitGroup, ctx context.Context) error {
 	count := 0
 	defer wg.Done()
-	fmt.Println("RunStreamNofTag")
+	log.Printf("Run %s", s.GetDesc())
 	for {
 		select {
 		case <-ctx.Done(): // if cancel() execute
@@ -37,23 +46,23 @@ func RunClientStream(wg *sync.WaitGroup, ctx context.Context, getInitAck func() 
 		default:
 		}
 		count = 0
-		QOS := option.QOS
+		QOS := s.QOS
 		time.Sleep(time.Second * 5)
 		ctx = metadata.NewOutgoingContext(ctx,
 			metadata.Pairs(
-				"qos", fmt.Sprintf("%d", option.QOS),
-				"name", option.Name,
-				"max_size_buff", fmt.Sprintf("%d", option.MaxSizeBuff),
-				"wait_ack_timeout", fmt.Sprintf("%d", option.WaitAckTimeout),
+				"qos", fmt.Sprintf("%d", s.QOS),
+				"name", s.NameConnect,
+				"max_size_buff", fmt.Sprintf("%d", s.MaxSizeBuff),
+				"wait_ack_timeout", fmt.Sprintf("%d", s.WaitAckTimeout),
 			),
 		)
-		client, err := connect(ctx)
+		client, err := s.Connect(ctx)
 		//client, err := sppd.StreamNofTagZone(ctx)
 		if err != nil {
-			fmt.Println("error RunStreamNofTag", err)
+			log.Printf("%s error %s", s.GetDesc(), err)
 			continue
 		} else {
-			fmt.Println("Connect to sppd StreamNofTagZone Ok")
+			log.Printf("Connect to %s Ok", s.GetDesc())
 		}
 
 		if md, err := client.Header(); err == nil {
@@ -70,29 +79,28 @@ func RunClientStream(wg *sync.WaitGroup, ctx context.Context, getInitAck func() 
 			}
 
 			if count >= QOS {
-				log.Println("ACK")
-				if err := client.SendMsg(getInitAck()); err != nil {
+				if err := client.SendMsg(s.InitAck()); err != nil {
 					if err == io.EOF {
-						fmt.Println("\tstream closed")
+						log.Printf("%s stream closed", s.GetDesc())
 						break
 					} else if err != nil {
-						fmt.Println("\terror happed", err)
+						log.Printf("%s %s error happed", s.GetDesc(), err)
 						break
 					}
 				}
 				count = 0
 			}
-			data := getInitData()
+			data := s.InitData()
 			err := client.RecvMsg(data)
 			count++
 			if err == io.EOF {
-				fmt.Println("\tstream closed")
+				log.Printf("%s stream closed", s.GetDesc())
 				break
 			} else if err != nil {
-				fmt.Println("\terror happed", err)
+				log.Printf("%s %s error happed", s.GetDesc(), err)
 				break
 			}
-			setData(data)
+			s.SetData(data)
 		}
 	}
 }
