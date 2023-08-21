@@ -44,7 +44,7 @@ func NewSubStream(id int32, nameStream string, ctx context.Context) *ServerStrea
 	return &sub
 }
 
-func (s *ServerStream) GetInfoChannel(ctx context.Context) (length int, capacity int) {
+func (s *ServerStream) GetInfoChannel() (length int, capacity int) {
 	length = len(s.ch_send)
 	capacity = cap(s.ch_send)
 	return
