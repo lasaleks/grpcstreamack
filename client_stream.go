@@ -53,16 +53,16 @@ func (s *ClientStream) Run(wg *sync.WaitGroup, ctx context.Context) error {
 		client, err := s.Connect(ctx)
 		//client, err := sppd.StreamNofTagZone(ctx)
 		if err != nil {
-			log.Printf("%s error %s", s.GetDesc(), err)
+			log.Printf("Connect %s error %s", s.GetDesc(), err)
 			continue
 		} else {
-			log.Printf("Connect to %s Ok", s.GetDesc())
+			log.Printf("Connect %s is Ok", s.GetDesc())
 		}
 
 		if md, err := client.Header(); err == nil {
 			if v, err := strconv.ParseInt(md["qos"][0], 10, 32); err == nil {
 				QOS = int(v)
-				fmt.Printf("QOS:%d\n", QOS)
+				log.Printf("%s server.QOS:%d\n", s.GetDesc(), QOS)
 			}
 		}
 		for {

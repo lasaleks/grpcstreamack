@@ -44,6 +44,12 @@ func NewSubStream(id int32, nameStream string, ctx context.Context) *ServerStrea
 	return &sub
 }
 
+func (s *ServerStream) GetInfoChannel(ctx context.Context) (length int, capacity int) {
+	length = len(s.ch_send)
+	capacity = cap(s.ch_send)
+	return
+}
+
 func (s *ServerStream) GetOptionsFromContext(ctx context.Context) OptionStream {
 	opt := OptionStream{
 		NameConnect:      "",
@@ -83,7 +89,7 @@ func (s *ServerStream) GetOptionsFromContext(ctx context.Context) OptionStream {
 }
 
 func (s *ServerStream) GetDesc() string {
-	return fmt.Sprintf("Stream %s Id:%d Name:%s", s.NameStream, s.Id, s.Option.NameConnect)
+	return fmt.Sprintf("Stream %s Id:%d Client:%s", s.NameStream, s.Id, s.Option.NameConnect)
 }
 
 func (s *ServerStream) Send(value interface{}) {
