@@ -60,9 +60,14 @@ func (s *ClientStream) Run(wg *sync.WaitGroup, ctx context.Context) error {
 		}
 
 		if md, err := client.Header(); err == nil {
-			if v, err := strconv.ParseInt(md["qos"][0], 10, 32); err == nil {
-				QOS = int(v)
-				log.Printf("%s server.QOS:%d\n", s.GetDesc(), QOS)
+			if len(md["qos"]) > 0 {
+				if v, err := strconv.ParseInt(md["qos"][0], 10, 32); err == nil {
+					QOS = int(v)
+					log.Printf("%s server.QOS:%d\n", s.GetDesc(), QOS)
+				}
+			} else {
+				log.Println("error QOS empty")
+				QOS = 1
 			}
 		}
 		for {
